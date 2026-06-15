@@ -1,0 +1,43 @@
+# venv
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Data (nếu bạn dùng HDFS / dataset lớn)
+data/
+outputs/
+runs/
+
+# Ultralytics YOLO
+runs/
+weights/
+*.pt
+
+# Spark
+spark-warehouse/
+
+# Hadoop temp
+tmp/
+
+saved_models/
+VnCoreNLP/
