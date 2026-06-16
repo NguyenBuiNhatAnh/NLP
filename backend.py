@@ -7,6 +7,8 @@ from typing import List, Union
 import torch.nn.functional as F
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from src.preprocess import clean_pipeline   # import hàm xử lý văn bản của bạn
+from typing import Dict
+
 
 warnings.filterwarnings("ignore")
 
@@ -35,9 +37,8 @@ class PredictionResult(BaseModel):
     cleaned: str
     prediction: str
     confidence: float
-    # Nếu muốn trả về toàn bộ xác suất các lớp (tuỳ chọn)
-    # probabilities: List[float]
-
+    probabilities: Dict[str, float]
+    
 class PredictResponse(BaseModel):
     results: List[PredictionResult]
 
@@ -88,12 +89,16 @@ def predict_sentiment(texts: Union[str, List[str]]) -> List[dict]:
                 current_labels = LABEL_NAMES
             predicted_label = current_labels[pred_idx]
 
+        prob_dict = {current_labels[i]: round(probs[i].item() * 100, 2) for i in range(num_classes)}
+
         results.append({
             "original": text,
             "cleaned": cleaned_text,
             "prediction": predicted_label,
-            "confidence": round(confidence, 2)
+            "confidence": round(confidence, 2),
+            "probabilities": prob_dict
         })
+        
     return results
 
 @app.post("/predict", response_model=PredictResponse)

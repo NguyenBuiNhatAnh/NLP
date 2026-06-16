@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import axios from 'axios';
-import './App.css';
+import "./App.css"
 
 const API_URL = 'http://localhost:8000/predict';
+
+const LABELS = [
+  { key: 'Tích cực', barClass: 'bar-pos', icon: 'ti-mood-happy', badge: 'pos' },
+  { key: 'Trung tính', barClass: 'bar-neu', icon: 'ti-mood-neutral', badge: 'neu' },
+  { key: 'Tiêu cực', barClass: 'bar-neg', icon: 'ti-mood-angry', badge: 'neg' },
+];
 
 function App() {
   const [text, setText] = useState('');
@@ -11,92 +17,83 @@ function App() {
   const [error, setError] = useState('');
 
   const handlePredict = async () => {
-    if (!text.trim()) {
-      setError('Vui lòng nhập bình luận');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setResult(null);
-
+    if (!text.trim()) { setError('Vui lòng nhập bình luận'); return; }
+    setLoading(true); setError(''); setResult(null);
     try {
-      const response = await axios.post(API_URL, { text });
-      const prediction = response.data.results[0];
-      setResult(prediction);
-    } catch (err) {
-      console.error(err);
+      const res = await axios.post(API_URL, { text });
+      setResult(res.data.results[0]);
+    } catch {
       setError('Không thể kết nối đến API. Hãy đảm bảo backend đang chạy ở cổng 8000.');
     } finally {
       setLoading(false);
     }
   };
 
-  const getColor = (prediction) => {
-    if (prediction === 'Tích cực') return '#28a745';
-    if (prediction === 'Tiêu cực') return '#dc3545';
-    return '#ffc107';
-  };
-
-  const getEmoji = (prediction) => {
-    if (prediction === 'Tích cực') return '😊';
-    if (prediction === 'Tiêu cực') return '😠';
-    return '😐';
-  };
-
   return (
-    <div className="container">
-      <div className="header">
-        <h1>🔍 Phân tích cảm xúc bình luận</h1>
-        <p>Nhập bình luận tiếng Việt, mô hình PhoBERT sẽ dự đoán cảm xúc</p>
+    <div className="wrap">
+      <h1>Phân tích cảm xúc bình luận</h1>
+      <p className="sub">Nhập bình luận tiếng Việt, mô hình PhoBERT sẽ dự đoán cảm xúc</p>
 
-        <textarea
-          rows="5"
-          placeholder="Ví dụ: Sản phẩm quá tệ, tôi thất vọng..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="textarea"
-        />
+      <textarea
+        rows="5"
+        placeholder="Ví dụ: Sản phẩm quá tệ, tôi thất vọng..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
 
-        <button onClick={handlePredict} disabled={loading} className="button">
-          {loading ? 'Đang phân tích...' : 'Dự đoán cảm xúc'}
-        </button>
+      <button onClick={handlePredict} disabled={loading}>
+        {loading ? 'Đang phân tích...' : 'Dự đoán cảm xúc'}
+      </button>
 
-        {error && <div className="error">{error}</div>}
+      {error && <div className="error">{error}</div>}
 
-        {result && (
-          <div className="result-card">
-            <h2>Kết quả phân tích</h2>
-            <div className="row">
-              <span className="label">Văn bản gốc:</span>
-              <span>{result.original}</span>
+      {result && (
+        <div className="card">
+          <div className="meta-row">
+            <div className="meta-item">
+              <span className="meta-lbl">Văn bản gốc</span>
+              <span className="meta-val light">{result.original}</span>
             </div>
-            <div className="row">
-              <span className="label">Văn bản sau xử lý:</span>
-              <span>{result.cleaned}</span>
+            <div className="meta-item">
+              <span className="meta-lbl">Sau xử lý</span>
+              <span className="meta-val muted">{result.cleaned}</span>
             </div>
-            <div className="row">
-              <span className="label">Cảm xúc:</span>
-              <span
-                className="sentiment"
-                style={{
-                  backgroundColor: getColor(result.prediction),
-                  color: 'white',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  display: 'inline-block'
-                }}
-              >
-                {getEmoji(result.prediction)} {result.prediction}
-              </span>
-            </div>
-            <div className="row">
-              <span className="label">Độ tự tin:</span>
-              <span>{result.confidence}%</span>
+            <div className="meta-item">
+              <span className="meta-lbl">Kết quả</span>
+              {LABELS.filter(l => l.key === result.prediction).map(l => (
+                <span key={l.key} className={`badge ${l.badge}`}>
+                  <i className={l.icon}></i> {l.key}
+                </span>
+              ))}
             </div>
           </div>
-        )}
-      </div>
+
+          <hr className="divider" />
+
+          <div className="bar-section">
+            {LABELS.map(({ key, barClass }) => {
+              const pct = result.probabilities?.[key] ?? 0;
+              return (
+                <div className="bar-row" key={key}>
+                  <span className="bar-lbl">{key}</span>
+                  <div className="bar-track">
+                    <div className={`bar-fill ${barClass}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="bar-pct">{pct.toFixed(1)}%</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="confidence-row">
+            <span className="conf-lbl">Độ tự tin</span>
+            <div className="conf-track">
+              <div className="conf-fill" style={{ width: `${result.confidence}%` }} />
+            </div>
+            <span className="conf-val">{result.confidence}%</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
